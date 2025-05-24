@@ -103,11 +103,12 @@ TEMPLATE = """<!DOCTYPE html>
     <meta charset='UTF-8'>
     <title>족욕 예약 시스템</title>
     <style>
-.form-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
-.form-row label { flex: 1; min-width: 120px; }
-.seat-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+form label { display: block; margin-bottom: 10px; font-weight: bold; }
+form input, form select { width: 100%; font-size: 16px; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+.seat-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
 .seat-row label { flex: 0 0 auto; }
-@media (max-width: 600px) { .form-row { flex-direction: column; } }
+.submit-btn { width: 100%; padding: 12px; font-size: 18px; margin-top: 16px; background-color: #4CAF50; color: white; border: none; border-radius: 5px; }
+.submit-btn:hover { background-color: #45a049; cursor: pointer; }
 
         body { font-family: sans-serif; margin: 1em; }
         table { width: 100%; border-collapse: collapse; }
@@ -154,33 +155,33 @@ TEMPLATE = """<!DOCTYPE html>
 
     <h2>새 예약 등록</h2>
 <form action="/add" method="post">
-  <div class="form-row">
-    <label>이름: <input type="text" name="name" list="name_list" required></label>
-    <label>결제방식:
-      <select name="payment">
-        <option>카드</option><option>현금</option><option>계좌이체</option>
-      </select>
-    </label>
-  </div>
-
-  <div class="form-row">
-    <label>시작시간: <input type="time" name="start_time" step="300" required></label>
-    <label>종료시간: <input type="time" name="end_time" step="300" required></label>
-  </div>
-
-  <div class="form-row">
-    <label>인원: <input type="number" name="people_count" min="1" required></label>
-    <label>비고: <input type="text" name="note"></label>
-  </div>
-
+  <label>이름:
+    <input type="text" name="name" list="name_list" required>
+  </label>
+  <label>결제방식:
+    <select name="payment">
+      <option>카드</option><option>현금</option><option>계좌이체</option>
+    </select>
+  </label>
+  <label>시작시간:
+    <input type="time" name="start_time" step="300" required>
+  </label>
+  <label>종료시간:
+    <input type="time" name="end_time" step="300" required>
+  </label>
+  <label>인원:
+    <input type="number" name="people_count" min="1" required>
+  </label>
+  <label>비고:
+    <input type="text" name="note">
+  </label>
+  <div>좌석 선택:</div>
   <div class="seat-row">
-    좌석 선택:
     {% for i in range(1, 13) %}
       <label><input type="checkbox" name="seats" value="{{ i }}"> {{ i }}번</label>
     {% endfor %}
   </div>
-
-  <button type="submit">예약 등록</button>
+  <button type="submit" class="submit-btn">예약 등록</button>
 </form>
 
     
