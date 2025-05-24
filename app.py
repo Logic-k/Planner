@@ -102,7 +102,65 @@ TEMPLATE = """<!DOCTYPE html>
 <head>
     <meta charset='UTF-8'>
     <title>족욕 예약 시스템</title>
-    <style>
+    
+<style>
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 12px;
+    line-height: 1.5;
+}
+input, select, button {
+    font-size: 16px;
+    padding: 8px;
+    margin-top: 8px;
+    margin-bottom: 12px;
+    width: 100%;
+    box-sizing: border-box;
+}
+form label {
+    font-weight: bold;
+    display: block;
+    margin-top: 12px;
+}
+form input[type="checkbox"] {
+    transform: scale(1.4);
+    margin-right: 6px;
+}
+.seat-checkbox {
+    display: inline-block;
+    margin: 6px 8px;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 15px;
+}
+th, td {
+    border: 1px solid #ccc;
+    padding: 8px 6px;
+}
+th {
+    background: #f0f0f0;
+    position: sticky;
+    top: 0;
+}
+@media (max-width: 600px) {
+    body {
+        font-size: 16px;
+    }
+    th, td {
+        font-size: 13px;
+        padding: 6px 4px;
+    }
+    .seat-checkbox {
+        display: block;
+    }
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+}
+</style>
         body { font-family: sans-serif; margin: 1em; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #ccc; padding: 4px; text-align: center; }
