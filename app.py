@@ -102,10 +102,13 @@ TEMPLATE = """<!DOCTYPE html>
 <head>
     <meta charset='UTF-8'>
     <title>족욕 예약 시스템</title>
-    <head>
-    <meta charset='UTF-8'>
-    <title>족욕 예약 시스템</title>
     <style>
+.form-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+.form-row label { flex: 1; min-width: 120px; }
+.seat-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+.seat-row label { flex: 0 0 auto; }
+@media (max-width: 600px) { .form-row { flex-direction: column; } }
+
         body { font-family: sans-serif; margin: 1em; }
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #ccc; padding: 4px; text-align: center; }
@@ -126,7 +129,6 @@ TEMPLATE = """<!DOCTYPE html>
             table { font-size: 12px; }
         }
     </style>
-</head>
     <script>
     function autoFillEndTime() {
         const startInput = document.querySelector('input[name="start_time"]');
@@ -151,7 +153,37 @@ TEMPLATE = """<!DOCTYPE html>
     </form>
 
     <h2>새 예약 등록</h2>
-    <form action="/add" method="post">
+    
+<form action="/add" method="post">
+  <div class="form-row">
+    <label>이름: <input type="text" name="name" list="name_list" required></label>
+    <label>결제방식:
+      <select name="payment">
+        <option>카드</option><option>현금</option><option>계좌이체</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="form-row">
+    <label>시작시간: <input type="time" name="start_time" step="300" required></label>
+    <label>종료시간: <input type="time" name="end_time" step="300" required></label>
+  </div>
+
+  <div class="form-row">
+    <label>인원: <input type="number" name="people_count" min="1" required></label>
+    <label>비고: <input type="text" name="note"></label>
+  </div>
+
+  <div class="seat-row">
+    좌석 선택:
+    {% for i in range(1, 13) %}
+      <label><input type="checkbox" name="seats" value="{{ i }}"> {{ i }}번</label>
+    {% endfor %}
+  </div>
+
+  <button type="submit">예약 등록</button>
+</form>
+
         이름: <input type="text" name="name" list="name_list" required>
         <datalist id="name_list">
             {% for n in names %}
