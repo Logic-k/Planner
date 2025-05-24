@@ -97,7 +97,8 @@ def delete_reservation(res_id):
     conn.close()
     return redirect('/')
 
-TEMPLATE = """<!DOCTYPE html>
+TEMPLATE = """
+<!DOCTYPE html>
 <html>
 <head>
     <meta charset='UTF-8'>
