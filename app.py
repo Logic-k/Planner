@@ -1,16 +1,14 @@
 from flask import Flask, render_template_string, request, redirect
 import sqlite3, os
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
-
-# DB 파일 경로
 DB_PATH = os.path.join(os.path.dirname(__file__), 'reserve.db')
 
-# DB 초기화 (최초 1회 자동 생성)
 def init_db():
     if not os.path.exists(DB_PATH):
         conn = sqlite3.connect(DB_PATH)
-        conn.execute('''
+        conn.execute("""
             CREATE TABLE reservations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -20,23 +18,42 @@ def init_db():
                 seats TEXT,
                 people_count INTEGER
             )
-        ''')
+        """)
         conn.commit()
         conn.close()
-
-init_db()
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
+def generate_gantt_data(reservations):
+    start_time = datetime.strptime("10:00", "%H:%M")
+    end_time = datetime.strptime("22:00", "%H:%M")
+    time_slots = []
+    while start_time < end_time:
+        time_slots.append(start_time.strftime("%H:%M"))
+        start_time += timedelta(minutes=5)
+    seat_lines = {str(i): [''] * len(time_slots) for i in range(1, 13)}
+    for r in reservations:
+        start = datetime.strptime(r['start_time'], "%H:%M")
+        end = datetime.strptime(r['end_time'], "%H:%M")
+        seats = r['seats'].split(',')
+        for seat in seats:
+            seat = seat.strip()
+            for i, t in enumerate(time_slots):
+                cur_time = datetime.strptime(t, "%H:%M")
+                if start <= cur_time < end:
+                    seat_lines[seat][i] = r['name']
+    return time_slots, seat_lines
+
 @app.route('/')
 def index():
     conn = get_db_connection()
     reservations = conn.execute('SELECT * FROM reservations ORDER BY start_time').fetchall()
     conn.close()
-    return render_template_string(TEMPLATE, reservations=reservations)
+    time_slots, seat_lines = generate_gantt_data(reservations)
+    return render_template_string(TEMPLATE, reservations=reservations, time_slots=time_slots, seat_lines=seat_lines)
 
 @app.route('/add', methods=['POST'])
 def add_reservation():
@@ -46,7 +63,6 @@ def add_reservation():
     end_time = request.form['end_time']
     seats = request.form['seats']
     people_count = int(request.form['people_count'])
-
     conn = get_db_connection()
     conn.execute('INSERT INTO reservations (name, payment, start_time, end_time, seats, people_count) VALUES (?, ?, ?, ?, ?, ?)',
                  (name, payment, start_time, end_time, seats, people_count))
@@ -54,12 +70,27 @@ def add_reservation():
     conn.close()
     return redirect('/')
 
-TEMPLATE = '''
+TEMPLATE = """
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
+    <meta charset='UTF-8'>
     <title>족욕 예약 시스템</title>
+    <script>
+    function autoFillEndTime() {
+        const startInput = document.querySelector('input[name="start_time"]');
+        const endInput = document.querySelector('input[name="end_time"]');
+        startInput.addEventListener('change', () => {
+            const [h, m] = startInput.value.split(':').map(Number);
+            const start = new Date(0, 0, 0, h, m);
+            const end = new Date(start.getTime() + 30 * 60000);
+            const endHours = String(end.getHours()).padStart(2, '0');
+            const endMinutes = String(end.getMinutes()).padStart(2, '0');
+            endInput.value = `${endHours}:${endMinutes}`;
+        });
+    }
+    window.onload = autoFillEndTime;
+    </script>
 </head>
 <body>
     <h2>새 예약 등록</h2>
@@ -91,10 +122,34 @@ TEMPLATE = '''
         </tr>
         {% endfor %}
     </table>
+
+    <h2>좌석 간트차트</h2>
+    <div style="overflow-x: scroll;">
+    <table border="1" style="border-collapse: collapse;">
+        <tr>
+            <th>좌석 번호</th>
+            {% for t in time_slots %}
+                <th style="min-width: 50px;">{{ t }}</th>
+            {% endfor %}
+        </tr>
+        {% for seat_num in seat_lines %}
+        <tr>
+            <td>좌석 {{ seat_num }}</td>
+            {% for cell in seat_lines[seat_num] %}
+                {% if cell %}
+                    <td style="background-color: lightgreen; text-align:center;">{{ cell }}</td>
+                {% else %}
+                    <td></td>
+                {% endif %}
+            {% endfor %}
+        </tr>
+        {% endfor %}
+    </table>
+    </div>
 </body>
 </html>
-'''
+"""
 
+init_db()
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True)
