@@ -153,7 +153,6 @@ TEMPLATE = """<!DOCTYPE html>
     </form>
 
     <h2>새 예약 등록</h2>
-    
 <form action="/add" method="post">
   <div class="form-row">
     <label>이름: <input type="text" name="name" list="name_list" required></label>
@@ -184,26 +183,7 @@ TEMPLATE = """<!DOCTYPE html>
   <button type="submit">예약 등록</button>
 </form>
 
-        이름: <input type="text" name="name" list="name_list" required>
-        <datalist id="name_list">
-            {% for n in names %}
-            <option value="{{ n }}">
-            {% endfor %}
-        </datalist>
-        결제방식:
-        <select name="payment">
-            <option>카드</option><option>현금</option><option>계좌이체</option>
-        </select>
-        시작시간: <input type="time" name="start_time" step="300" required>
-        종료시간: <input type="time" name="end_time" step="300" required>
-        인원: <input type="number" name="people_count" min="1" required>
-        비고: <input type="text" name="note">
-        좌석 선택:<br>
-        {% for i in range(1, 13) %}
-            <label><input type="checkbox" name="seats" value="{{ i }}"> {{ i }}번 </label>
-        {% endfor %}
-        <br><button type="submit">예약 등록</button>
-    </form>
+    
 
     <h2>예약 목록 ({{ filter_date }})</h2>
     <table>
