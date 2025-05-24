@@ -1,4 +1,4 @@
-from flask import Flask, render_template_string, request, redirect, url_for
+from flask import Flask, render_template_string, request, redirect
 import sqlite3, os
 from datetime import datetime, timedelta
 
@@ -17,7 +17,8 @@ def init_db():
                 end_time TEXT,
                 seats TEXT,
                 people_count INTEGER,
-                note TEXT
+                note TEXT,
+                reserve_date TEXT
             )
         """)
         conn.commit()
@@ -48,14 +49,15 @@ def generate_gantt_data(reservations):
                     seat_lines[seat][i] = r['name']
     return time_slots, seat_lines
 
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
+    filter_date = request.form.get('filter_date') or datetime.now().strftime("%Y-%m-%d")
     conn = get_db_connection()
-    reservations = conn.execute('SELECT * FROM reservations ORDER BY start_time').fetchall()
+    reservations = conn.execute('SELECT * FROM reservations WHERE reserve_date = ? ORDER BY start_time', (filter_date,)).fetchall()
     conn.close()
     time_slots, seat_lines = generate_gantt_data(reservations)
     names = list(set([r['name'] for r in reservations]))
-    return render_template_string(TEMPLATE, reservations=reservations, time_slots=time_slots, seat_lines=seat_lines, names=names)
+    return render_template_string(TEMPLATE, reservations=reservations, time_slots=time_slots, seat_lines=seat_lines, names=names, filter_date=filter_date)
 
 @app.route('/add', methods=['POST'])
 def add_reservation():
@@ -67,9 +69,10 @@ def add_reservation():
     note = request.form['note']
     seats = request.form.getlist('seats')
     seats_str = ",".join(seats)
+    reserve_date = datetime.now().strftime("%Y-%m-%d")
 
     conn = get_db_connection()
-    existing = conn.execute('SELECT * FROM reservations').fetchall()
+    existing = conn.execute('SELECT * FROM reservations WHERE reserve_date = ?', (reserve_date,)).fetchall()
     for r in existing:
         r_start = datetime.strptime(r['start_time'], "%H:%M")
         r_end = datetime.strptime(r['end_time'], "%H:%M")
@@ -80,8 +83,8 @@ def add_reservation():
                 conn.close()
                 return "예약 중복 발생: 같은 시간에 동일 좌석이 이미 예약됨", 400
 
-    conn.execute('INSERT INTO reservations (name, payment, start_time, end_time, seats, people_count, note) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                 (name, payment, start_time, end_time, seats_str, people_count, note))
+    conn.execute('INSERT INTO reservations (name, payment, start_time, end_time, seats, people_count, note, reserve_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                 (name, payment, start_time, end_time, seats_str, people_count, note, reserve_date))
     conn.commit()
     conn.close()
     return redirect('/')
@@ -94,12 +97,32 @@ def delete_reservation(res_id):
     conn.close()
     return redirect('/')
 
-TEMPLATE = """
-<!DOCTYPE html>
+TEMPLATE = """<!DOCTYPE html>
 <html>
 <head>
     <meta charset='UTF-8'>
     <title>족욕 예약 시스템</title>
+    <style>
+        body { font-family: sans-serif; margin: 1em; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ccc; padding: 4px; text-align: center; }
+        .seat-1 { background-color: #ffcccc; }
+        .seat-2 { background-color: #ffd9b3; }
+        .seat-3 { background-color: #ffffcc; }
+        .seat-4 { background-color: #ccffcc; }
+        .seat-5 { background-color: #ccffff; }
+        .seat-6 { background-color: #ccccff; }
+        .seat-7 { background-color: #e6ccff; }
+        .seat-8 { background-color: #ffccff; }
+        .seat-9 { background-color: #ffb3d9; }
+        .seat-10 { background-color: #b3e6ff; }
+        .seat-11 { background-color: #d9ffb3; }
+        .seat-12 { background-color: #f0e6cc; }
+        @media (max-width: 600px) {
+            form input, form select, form button, form label { display: block; width: 100%; margin: 6px 0; }
+            table { font-size: 12px; }
+        }
+    </style>
     <script>
     function autoFillEndTime() {
         const startInput = document.querySelector('input[name="start_time"]');
@@ -117,6 +140,12 @@ TEMPLATE = """
     </script>
 </head>
 <body>
+    <h2>날짜 필터</h2>
+    <form method="post">
+        <input type="date" name="filter_date" value="{{ filter_date }}">
+        <button type="submit">필터 적용</button>
+    </form>
+
     <h2>새 예약 등록</h2>
     <form action="/add" method="post">
         이름: <input type="text" name="name" list="name_list" required>
@@ -124,26 +153,24 @@ TEMPLATE = """
             {% for n in names %}
             <option value="{{ n }}">
             {% endfor %}
-        </datalist><br>
+        </datalist>
         결제방식:
         <select name="payment">
-            <option>카드</option>
-            <option>현금</option>
-            <option>계좌이체</option>
-        </select><br>
-        시작시간: <input type="time" name="start_time" step="300" required><br>
-        종료시간: <input type="time" name="end_time" step="300" required><br>
-        인원: <input type="number" name="people_count" min="1" required><br>
+            <option>카드</option><option>현금</option><option>계좌이체</option>
+        </select>
+        시작시간: <input type="time" name="start_time" step="300" required>
+        종료시간: <input type="time" name="end_time" step="300" required>
+        인원: <input type="number" name="people_count" min="1" required>
+        비고: <input type="text" name="note">
         좌석 선택:<br>
         {% for i in range(1, 13) %}
             <label><input type="checkbox" name="seats" value="{{ i }}"> {{ i }}번 </label>
-        {% endfor %}<br>
-        비고: <input type="text" name="note"><br>
-        <button type="submit">예약 등록</button>
+        {% endfor %}
+        <br><button type="submit">예약 등록</button>
     </form>
 
-    <h2>예약 목록</h2>
-    <table border="1">
+    <h2>예약 목록 ({{ filter_date }})</h2>
+    <table>
         <tr><th>이름</th><th>시간</th><th>좌석</th><th>인원</th><th>결제</th><th>비고</th><th>삭제</th></tr>
         {% for r in reservations %}
         <tr>
@@ -153,33 +180,27 @@ TEMPLATE = """
             <td>{{ r.people_count }}</td>
             <td>{{ r.payment }}</td>
             <td>{{ r.note }}</td>
-            <td><a href="/delete/{{ r.id }}" onclick="return confirm('정말 삭제하시겠습니까?')">삭제</a></td>
+            <td><a href="/delete/{{ r.id }}">삭제</a></td>
         </tr>
         {% endfor %}
     </table>
 
-    <h2>좌석 간트차트</h2>
+    <h2>간트차트</h2>
     <div style="overflow-x: scroll;">
-    <table border="1" style="border-collapse: collapse;">
-        <tr>
-            <th>좌석 번호</th>
-            {% for t in time_slots %}
-                <th style="min-width: 50px;">{{ t }}</th>
-            {% endfor %}
-        </tr>
-        {% for seat_num in seat_lines %}
-        <tr>
-            <td>좌석 {{ seat_num }}</td>
+        <table>
+            <tr><th>좌석</th>{% for t in time_slots %}<th>{{ t }}</th>{% endfor %}</tr>
+            {% for seat_num in seat_lines %}
+            <tr><td>{{ seat_num }}번</td>
             {% for cell in seat_lines[seat_num] %}
                 {% if cell %}
-                    <td style="background-color: lightgreen; text-align:center;">{{ cell }}</td>
+                <td class="seat-{{ seat_num }}">{{ cell }}</td>
                 {% else %}
-                    <td></td>
+                <td></td>
                 {% endif %}
             {% endfor %}
-        </tr>
-        {% endfor %}
-    </table>
+            </tr>
+            {% endfor %}
+        </table>
     </div>
 </body>
 </html>
